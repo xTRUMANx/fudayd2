@@ -2,21 +2,38 @@ import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Text } from '@/components/ui/text';
 import { Link, Stack } from 'expo-router';
 import { ExtendedStackNavigationOptions } from 'expo-router/build/layouts/StackClient';
-import { MoonStarIcon, PhoneIcon, SunIcon } from 'lucide-react-native';
+import {
+  CopyCheckIcon,
+  CopyIcon,
+  EllipsisIcon,
+  MoonStarIcon,
+  PhoneIcon,
+  StarIcon,
+  SunIcon,
+} from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import * as React from 'react';
 import { ScrollView, View } from 'react-native';
 import {
   UssdService,
-  ussdServices,
   generateShortCode,
   OperationParameterValues,
+  getUssdServices,
 } from '../lib/ussdServices';
 import clsx from 'clsx';
+import * as Clipboard from 'expo-clipboard';
+import { Label } from '@/components/ui/label';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 
 const SCREEN_OPTIONS: ExtendedStackNavigationOptions = {
   title: 'Fudayd',
@@ -26,9 +43,12 @@ const SCREEN_OPTIONS: ExtendedStackNavigationOptions = {
 };
 
 export default function Screen() {
+  const [ussdServices, _] = React.useState(getUssdServices());
   const [currentService, setCurrentService] = React.useState(ussdServices[0]);
   const [currentOperation, setCurrentOperation] = React.useState(ussdServices[0].operations[0]);
   const [parameterValues, setParameterValues] = React.useState<OperationParameterValues>({});
+  const [copied, setCopied] = React.useState(false);
+
 
   const selectService = (serviceName: string) => {
     const service = ussdServices.find((s) => s.name === serviceName)!;
@@ -47,58 +67,95 @@ export default function Screen() {
 
   var generatedShortCode = generateShortCode(currentOperation, parameterValues);
 
+  const copyShortCode = async () => {
+    await Clipboard.setStringAsync(generatedShortCode);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   return (
     <>
       <Stack.Screen options={SCREEN_OPTIONS} />
-      <ScrollView className="pt-8 bg-background">
-        <View className="flex-1 items-center justify-center pt-16">
-          <View>
-            <Tabs value={currentService.name} onValueChange={selectService}>
-              <TabsList>
-                {ussdServices.map((service) => (
-                  <TabsTrigger key={service.name} value={service.name}>
-                    <Text>{service.name}</Text>
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-              {ussdServices.map((service) => (
-                <TabsContent key={service.name} value={service.name}>
-                  <Tabs
-                    value={currentOperation.name}
-                    onValueChange={(value) => selectOperation(service, value)}>
-                    <TabsList>
-                      {service.operations.map((operation) => (
-                        <TabsTrigger key={operation.name} value={operation.name}>
-                          <Text>{operation.name}</Text>
-                        </TabsTrigger>
-                      ))}
-                    </TabsList>
-                    {service.operations.map((operation) => (
-                      <TabsContent key={operation.name} value={operation.name}>
-                        <Text className="text-center">{operation.name} Details</Text>
-                        {operation.parameters.map((p) => (
-                          <>
-                            <Text key={`label-${p.name}`}>{p.name}</Text>
-                            <Input
-                              key={`input-${p.name}`}
-                              placeholder={p.name}
-                              className="my-2"
-                              defaultValue={parameterValues[p.name] ?? ''}
-                              keyboardType="numeric"
-                              onChange={(e) => setParameter(p.name, e.nativeEvent.text)}
-                            />
-                          </>
-                        ))}
-                      </TabsContent>
-                    ))}
-                  </Tabs>
-                </TabsContent>
-              ))}
-            </Tabs>
+      <ScrollView className="items-center justify-start">
+        <View className="w-sm px-2 pt-16">
+          <View className="flex-row flex-wrap justify-center gap-2">
+            {ussdServices.map((service) => (
+              <Button
+                key={service.name}
+                className="h-6"
+                size={'sm'}
+                onPress={() => selectService(service.name)}>
+                <Text key={service.name}>{service.name}</Text>
+              </Button>
+            ))}
           </View>
+          <Separator className="w-full" />
+          <View className="flex-row flex-wrap justify-center gap-x-1 gap-y-1 p-2">
+            {currentService.operations
+              .filter((o) => o.favorite || o.name === currentOperation.name)
+              .map((operation) => (
+                <Button
+                  key={operation.name}
+                  className="h-6"
+                  size={'sm'}
+                  onPress={() => selectOperation(currentService, operation.name)}>
+                  <Text>{operation.name}</Text>
+                </Button>
+              ))}
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button className="h-6" size={'sm'}>
+                  <Icon as={EllipsisIcon} className="text-primary-foreground" />
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle className="text-center">
+                    {currentService.name} Operations
+                  </DialogTitle>
+                  <DialogDescription>
+                    <View className="flex w-96 flex-col gap-8 pt-4">
+                      {currentService.operations.map((operation) => (
+                        <View key={operation.name} className="flex flex-row gap-2">
+                          <Icon
+                            as={StarIcon}
+                            className={clsx('size-8', { 'fill-primary': operation.favorite })}
+                            onPress={() => alert('Not implemented')}
+                          />
+                          <Label onPress={() => selectOperation(currentService, operation.name)}>
+                            {operation.name}
+                          </Label>
+                        </View>
+                      ))}
+                    </View>
+                  </DialogDescription>
+                </DialogHeader>
+              </DialogContent>
+            </Dialog>
+          </View>
+          <Separator className="w-full" />
+          <Text className="text-center">{currentOperation.name} Details</Text>
+          {currentOperation.parameters.map((p) => (
+            <View key={p.name}>
+              <Text key={`label-${p.name}`}>{p.name}</Text>
+              <Input
+                key={`input-${p.name}`}
+                className="my-2"
+                defaultValue={parameterValues[p.name] ?? ''}
+                keyboardType="numeric"
+                onChange={(e) => setParameter(p.name, e.nativeEvent.text)}
+              />
+            </View>
+          ))}
           <Separator className={clsx('my-4 w-full', { hidden: !generatedShortCode })} />
-          <View className={clsx('w-48', { hidden: !generatedShortCode })}>
+          <View
+            className={clsx('flex-row items-center justify-center gap-2', {
+              hidden: !generatedShortCode,
+            })}>
             <Text className="text-center">{generatedShortCode || 'N/A'}</Text>
+            <Button variant={'ghost'} onPress={copyShortCode}>
+              <Icon as={copied ? CopyCheckIcon : CopyIcon} />
+            </Button>
           </View>
           <Separator className="my-4 w-full" />
           <View className="flex-row gap-2">
@@ -115,10 +172,11 @@ export default function Screen() {
               </View>
             </View>
             <Separator orientation="vertical" />
-            <View>
+            <View className="grow items-center">
               <Link href={`tel:${generatedShortCode}`} asChild>
                 <Button
                   size="lg"
+                  className="h-16 w-full rounded-full"
                   disabled={!generatedShortCode}
                   onPress={() => {
                     console.log('Dialing', generatedShortCode);
