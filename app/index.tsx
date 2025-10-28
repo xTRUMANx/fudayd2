@@ -17,12 +17,7 @@ import {
 import { useColorScheme } from 'nativewind';
 import * as React from 'react';
 import { ScrollView, View } from 'react-native';
-import {
-  UssdService,
-  generateShortCode,
-  OperationParameterValues,
-  getUssdServices,
-} from '../lib/ussdServices';
+import { generateShortCode, OperationParameterValues, useUssdStore } from '../lib/ussdServices';
 import clsx from 'clsx';
 import * as Clipboard from 'expo-clipboard';
 import { Label } from '@/components/ui/label';
@@ -37,29 +32,20 @@ import {
 
 const SCREEN_OPTIONS: ExtendedStackNavigationOptions = {
   title: 'Fudayd',
-  headerTransparent: true,
+  headerTransparent: false,
   headerRight: () => <ThemeToggle />,
   headerTitleStyle: { fontWeight: 'bold' },
 };
 
 export default function Screen() {
-  const [ussdServices, _] = React.useState(getUssdServices());
-  const [currentService, setCurrentService] = React.useState(ussdServices[0]);
-  const [currentOperation, setCurrentOperation] = React.useState(ussdServices[0].operations[0]);
+  const ussdServices = useUssdStore((state) => state.ussdServices);
+  const currentService = useUssdStore((state) => state.currentService());
+  const currentOperation = useUssdStore((state) => state.currentOperation());
+  const selectService = useUssdStore((state) => state.setCurrentServiceByName);
+  const selectOperation = useUssdStore((state) => state.setCurrentOperationByName);
+  const toggleOperationFavorite = useUssdStore((state) => state.toggleOperationFavorite);
   const [parameterValues, setParameterValues] = React.useState<OperationParameterValues>({});
   const [copied, setCopied] = React.useState(false);
-
-
-  const selectService = (serviceName: string) => {
-    const service = ussdServices.find((s) => s.name === serviceName)!;
-    setCurrentService(service);
-    setCurrentOperation(service.operations[0]);
-  };
-
-  const selectOperation = (service: UssdService, operationName: string) => {
-    const operation = service.operations.find((o) => o.name === operationName)!;
-    setCurrentOperation(operation);
-  };
 
   const setParameter = (paramName: string, value: string) => {
     setParameterValues((prev) => ({ ...prev, [paramName]: value }));
@@ -68,21 +54,22 @@ export default function Screen() {
   var generatedShortCode = generateShortCode(currentOperation, parameterValues);
 
   const copyShortCode = async () => {
-    await Clipboard.setStringAsync(generatedShortCode);
+    await Clipboard.setStringAsync(generatedShortCode || currentOperation.shortCode);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
   return (
     <>
-      <Stack.Screen options={SCREEN_OPTIONS} />
-      <ScrollView className="items-center justify-start">
-        <View className="w-sm px-2 pt-16">
-          <View className="flex-row flex-wrap justify-center gap-2">
+      <ScrollView>
+        <Stack.Screen options={SCREEN_OPTIONS} />
+        <View className="w-sm px-2">
+          <View className="flex-row flex-wrap justify-center gap-1 p-2">
             {ussdServices.map((service) => (
               <Button
                 key={service.name}
-                className="h-6"
+                variant={service.name === currentService.name ? 'default' : 'outline'}
+                className="h-6 px-2"
                 size={'sm'}
                 onPress={() => selectService(service.name)}>
                 <Text key={service.name}>{service.name}</Text>
@@ -96,16 +83,17 @@ export default function Screen() {
               .map((operation) => (
                 <Button
                   key={operation.name}
-                  className="h-6"
+                  variant={operation.name === currentOperation.name ? 'default' : 'outline'}
+                  className="h-6 px-2"
                   size={'sm'}
-                  onPress={() => selectOperation(currentService, operation.name)}>
+                  onPress={() => selectOperation(operation.name)}>
                   <Text>{operation.name}</Text>
                 </Button>
               ))}
             <Dialog>
               <DialogTrigger asChild>
-                <Button className="h-6" size={'sm'}>
-                  <Icon as={EllipsisIcon} className="text-primary-foreground" />
+                <Button className="h-6" size={'sm'} variant={'outline'}>
+                  <Icon as={EllipsisIcon} />
                 </Button>
               </DialogTrigger>
               <DialogContent>
@@ -117,12 +105,17 @@ export default function Screen() {
                     <View className="flex w-96 flex-col gap-8 pt-4">
                       {currentService.operations.map((operation) => (
                         <View key={operation.name} className="flex flex-row gap-2">
-                          <Icon
-                            as={StarIcon}
-                            className={clsx('size-8', { 'fill-primary': operation.favorite })}
-                            onPress={() => alert('Not implemented')}
-                          />
-                          <Label onPress={() => selectOperation(currentService, operation.name)}>
+                          <Button
+                            variant={'ghost'}
+                            onPress={(e) =>
+                              toggleOperationFavorite(currentService.name, operation.name)
+                            }>
+                            <Icon
+                              as={StarIcon}
+                              className={clsx('size-8', { 'fill-primary': operation.favorite })}
+                            />
+                          </Button>
+                          <Label onPress={() => selectOperation(operation.name)}>
                             {operation.name}
                           </Label>
                         </View>
@@ -147,17 +140,15 @@ export default function Screen() {
               />
             </View>
           ))}
-          <Separator className={clsx('my-4 w-full', { hidden: !generatedShortCode })} />
+          <Separator className='w-full' />
           <View
-            className={clsx('flex-row items-center justify-center gap-2', {
-              hidden: !generatedShortCode,
-            })}>
-            <Text className="text-center">{generatedShortCode || 'N/A'}</Text>
-            <Button variant={'ghost'} onPress={copyShortCode}>
+            className='flex-row items-center justify-center gap-2'>
+            <Button size={'lg'} variant={'ghost'} onPress={copyShortCode} className="m-0 p-0">
+              <Text className="text-center">{generatedShortCode || currentOperation.shortCode}</Text>
               <Icon as={copied ? CopyCheckIcon : CopyIcon} />
             </Button>
           </View>
-          <Separator className="my-4 w-full" />
+          <Separator className="mb-2 w-full" />
           <View className="flex-row gap-2">
             <View>
               <Text className="mb-1 text-lg font-bold">Review</Text>
@@ -172,15 +163,9 @@ export default function Screen() {
               </View>
             </View>
             <Separator orientation="vertical" />
-            <View className="grow items-center">
+            <View className="grow items-center justify-center">
               <Link href={`tel:${generatedShortCode}`} asChild>
-                <Button
-                  size="lg"
-                  className="h-16 w-full rounded-full"
-                  disabled={!generatedShortCode}
-                  onPress={() => {
-                    console.log('Dialing', generatedShortCode);
-                  }}>
+                <Button size="lg" className="h-32 w-32 rounded-full" disabled={!generatedShortCode}>
                   <Text>Dial</Text>
                   <Icon as={PhoneIcon} className="text-primary-foreground" />
                 </Button>

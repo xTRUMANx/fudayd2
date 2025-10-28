@@ -1,3 +1,6 @@
+import { create } from 'zustand';
+import { immer } from 'zustand/middleware/immer';
+
 export type UssdService = {
   name: string;
   operations: USSDServiceOpearation[];
@@ -16,7 +19,7 @@ export const generateShortCode = (
   operation: USSDServiceOpearation,
   parameters: OperationParameterValues
 ) => {
-  if(operation.parameters.length >  Object.keys(parameters).length) {
+  if (operation.parameters.length > Object.keys(parameters).length) {
     return '';
   }
 
@@ -34,10 +37,6 @@ export const generateShortCode = (
 
   return shortCode;
 };
-
-export const getUssdServices = (): UssdService[] => {
-  return structuredClone(ussdServices);
-}
 
 const ussdServices: UssdService[] = [
   {
@@ -199,3 +198,64 @@ const ussdServices: UssdService[] = [
     ],
   },
 ];
+
+export interface UssdStoreState {
+  ussdServices: UssdService[];
+  currentServiceIndex: number;
+  currentService: () => UssdService;
+  currentOperationIndex: number;
+  currentOperation: () => USSDServiceOpearation;
+}
+
+export interface UssdStoreActions {
+  setCurrentServiceByName: (serviceName: string) => void;
+  setCurrentOperationByName: (operationName: string) => void;
+  toggleOperationFavorite: (serviceName: string, operationName: string) => void;
+}
+
+export const useUssdStore = create<UssdStoreState & UssdStoreActions>()(
+  immer((set, get) => ({
+    ussdServices: ussdServices,
+    currentServiceIndex: 0,
+    currentService: () => {
+      const index = get().currentServiceIndex;
+      return get().ussdServices[index];
+    },
+    setCurrentServiceByName: (serviceName: string) => {
+      const serviceIndex = get().ussdServices.findIndex((s) => s.name === serviceName);
+      const currentOperationName = get().currentOperation().name;
+      if (serviceIndex !== -1) {
+        set({ currentServiceIndex: serviceIndex, currentOperationIndex: 0 });
+        get().setCurrentOperationByName(currentOperationName);
+      }
+    },
+    currentOperationIndex: 0,
+    currentOperation: () => {
+      const service = get().currentService();
+      const operationIndex = get().currentOperationIndex;
+      return service.operations.length > operationIndex
+        ? service.operations[operationIndex]
+        : service.operations[0];
+    },
+    setCurrentOperationByName: (operationName: string) => {
+      const service = get().currentService();
+      const operationIndex = service.operations.findIndex((o) => o.name === operationName);
+      operationIndex !== -1
+        ? set({ currentOperationIndex: operationIndex })
+        : set({ currentOperationIndex: 0 });
+    },
+    toggleOperationFavorite: (serviceName: string, operationName: string) => {
+      set((state) => {
+        const service = state.ussdServices.find((s) => s.name === serviceName);
+        if (!service) {
+          return;
+        }
+        const operation = service.operations.find((o) => o.name === operationName);
+        if (!operation) {
+          return;
+        }
+        operation.favorite = !operation.favorite;
+      });
+    },
+  }))
+);
