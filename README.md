@@ -5,7 +5,7 @@ This is a [React Native](https://reactnative.dev/) project built with [Expo](htt
 It was initialized using the following command:
 
 ```bash
-npx @react-native-reusables/cli@latest init -t hello-rn-reusables
+npx @react-native-reusables/cli@latest init -t fudayd
 ```
 
 ## Getting Started

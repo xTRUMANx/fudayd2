@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "hello-rn-reusables",
-    "slug": "hello-rn-reusables",
+    "name": "fudayd",
+    "slug": "fudayd",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "hello-rn-reusables",
+    "scheme": "fudayd",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
