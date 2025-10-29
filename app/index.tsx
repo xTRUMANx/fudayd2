@@ -63,7 +63,7 @@ export default function Screen() {
   return (
     <ScrollView className="bg-background">
       <Stack.Screen options={SCREEN_OPTIONS} />
-      <View className="w-sm bg-background px-2">
+      <View className="max-w-md mx-auto bg-background px-2">
         <Text className="text-center font-bold">Services</Text>
         <View className="flex-row flex-wrap justify-center gap-1 p-2">
           {ussdServices.map((service) => (
