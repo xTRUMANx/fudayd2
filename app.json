@@ -35,8 +35,7 @@
       "expo-router"
     ],
     "experiments": {
-      "typedRoutes": true,
-      "baseUrl": "/fudayd2"
+      "typedRoutes": true
     }
   }
 }
