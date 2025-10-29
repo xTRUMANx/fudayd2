@@ -29,6 +29,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import { Chip } from '@/components/chip';
 
 const SCREEN_OPTIONS: ExtendedStackNavigationOptions = {
   title: 'Fudayd',
@@ -60,121 +61,114 @@ export default function Screen() {
   };
 
   return (
-    <>
-      <ScrollView>
-        <Stack.Screen options={SCREEN_OPTIONS} />
-        <View className="w-sm px-2">
-          <View className="flex-row flex-wrap justify-center gap-1 p-2">
-            {ussdServices.map((service) => (
-              <Button
-                key={service.name}
-                variant={service.name === currentService.name ? 'default' : 'outline'}
-                className="h-6 px-2"
-                size={'sm'}
-                onPress={() => selectService(service.name)}>
-                <Text key={service.name}>{service.name}</Text>
-              </Button>
-            ))}
-          </View>
-          <Separator className="w-full" />
-          <View className="flex-row flex-wrap justify-center gap-x-1 gap-y-1 p-2">
-            {currentService.operations
-              .filter((o) => o.favorite || o.name === currentOperation.name)
-              .map((operation) => (
-                <Button
-                  key={operation.name}
-                  variant={operation.name === currentOperation.name ? 'default' : 'outline'}
-                  className="h-6 px-2"
-                  size={'sm'}
-                  onPress={() => selectOperation(operation.name)}>
-                  <Text>{operation.name}</Text>
-                </Button>
-              ))}
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button className="h-6" size={'sm'} variant={'outline'}>
-                  <Icon as={EllipsisIcon} />
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle className="text-center">
-                    {currentService.name} Operations
-                  </DialogTitle>
-                  <DialogDescription>
-                    <View className="flex w-96 flex-col gap-8 pt-4">
-                      {currentService.operations.map((operation) => (
-                        <View key={operation.name} className="flex flex-row gap-2">
-                          <Button
-                            variant={'ghost'}
-                            onPress={(e) =>
-                              toggleOperationFavorite(currentService.name, operation.name)
-                            }>
-                            <Icon
-                              as={StarIcon}
-                              className={clsx('size-8', { 'fill-primary': operation.favorite })}
-                            />
-                          </Button>
-                          <Label onPress={() => selectOperation(operation.name)}>
-                            {operation.name}
-                          </Label>
-                        </View>
-                      ))}
-                    </View>
-                  </DialogDescription>
-                </DialogHeader>
-              </DialogContent>
-            </Dialog>
-          </View>
-          <Separator className="w-full" />
-          <Text className="text-center">{currentOperation.name} Details</Text>
-          {currentOperation.parameters.map((p) => (
-            <View key={p.name}>
-              <Text key={`label-${p.name}`}>{p.name}</Text>
-              <Input
-                key={`input-${p.name}`}
-                className="my-2"
-                defaultValue={parameterValues[p.name] ?? ''}
-                keyboardType="numeric"
-                onChange={(e) => setParameter(p.name, e.nativeEvent.text)}
-              />
-            </View>
+    <ScrollView className="bg-background">
+      <Stack.Screen options={SCREEN_OPTIONS} />
+      <View className="w-sm bg-background px-2">
+        <Text className="text-center font-bold">Services</Text>
+        <View className="flex-row flex-wrap justify-center gap-1 p-2">
+          {ussdServices.map((service) => (
+            <Chip
+              key={service.name}
+              selected={service.name === currentService.name}
+              onPress={() => selectService(service.name)}
+              text={service.name}
+            />
           ))}
-          <Separator className='w-full' />
-          <View
-            className='flex-row items-center justify-center gap-2'>
-            <Button size={'lg'} variant={'ghost'} onPress={copyShortCode} className="m-0 p-0">
-              <Text className="text-center">{generatedShortCode || currentOperation.shortCode}</Text>
-              <Icon as={copied ? CopyCheckIcon : CopyIcon} />
-            </Button>
+        </View>
+        <Separator className="w-full" />
+        <Text className="text-center font-bold">Operations</Text>
+        <View className="flex-row flex-wrap justify-center gap-x-1 gap-y-1 p-2">
+          {currentService.operations
+            .filter((o) => o.favorite || o.name === currentOperation.name)
+            .map((operation) => (
+              <Chip
+                key={operation.name}
+                selected={operation.name === currentOperation.name}
+                onPress={() => selectOperation(operation.name)}
+                text={operation.name}
+              />
+            ))}
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button className={clsx('h-6 bg-secondary px-2')} size={'sm'}>
+                <Icon as={EllipsisIcon} />
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle className="text-center">{currentService.name} Operations</DialogTitle>
+                <DialogDescription>
+                  <View className="flex w-96 flex-col gap-8 pt-4">
+                    {currentService.operations.map((operation) => (
+                      <View key={operation.name} className="flex flex-row gap-2">
+                        <Button
+                          variant={'ghost'}
+                          onPress={(e) =>
+                            toggleOperationFavorite(currentService.name, operation.name)
+                          }>
+                          <Icon
+                            as={StarIcon}
+                            className={clsx('size-8', { 'fill-primary': operation.favorite })}
+                          />
+                        </Button>
+                        <Label onPress={() => selectOperation(operation.name)}>
+                          {operation.name}
+                        </Label>
+                      </View>
+                    ))}
+                  </View>
+                </DialogDescription>
+              </DialogHeader>
+            </DialogContent>
+          </Dialog>
+        </View>
+        <Separator className="w-full" />
+        <Text className="text-center">{currentOperation.name} Details</Text>
+        {currentOperation.parameters.map((p) => (
+          <View key={p.name}>
+            <Text key={`label-${p.name}`}>{p.name}</Text>
+            <Input
+              key={`input-${p.name}`}
+              className="my-2"
+              defaultValue={parameterValues[p.name] ?? ''}
+              keyboardType="numeric"
+              onChange={(e) => setParameter(p.name, e.nativeEvent.text)}
+            />
           </View>
-          <Separator className="mb-2 w-full" />
-          <View className="flex-row gap-2">
+        ))}
+        <Separator className="w-full" />
+        <View className="flex-row items-center justify-center gap-2">
+          <Button size={'lg'} variant={'ghost'} onPress={copyShortCode} className="m-0 p-0">
+            <Text className="text-center">{generatedShortCode || currentOperation.shortCode}</Text>
+            <Icon as={copied ? CopyCheckIcon : CopyIcon} />
+          </Button>
+        </View>
+        <Separator className="mb-2 w-full" />
+        <View className="flex-row gap-2">
+          <View>
+            <Text className="mb-1 text-lg font-bold">Review</Text>
             <View>
-              <Text className="mb-1 text-lg font-bold">Review</Text>
-              <View>
-                <Text>Service: {currentService.name}</Text>
-                <Text>Operation: {currentOperation.name}</Text>
-                {currentOperation.parameters.map((p) => (
-                  <Text key={p.name}>
-                    {p.name}: {parameterValues[p.name]}
-                  </Text>
-                ))}
-              </View>
+              <Text>Service: {currentService.name}</Text>
+              <Text>Operation: {currentOperation.name}</Text>
+              {currentOperation.parameters.map((p) => (
+                <Text key={p.name}>
+                  {p.name}: {parameterValues[p.name]}
+                </Text>
+              ))}
             </View>
-            <Separator orientation="vertical" />
-            <View className="grow items-center justify-center">
-              <Link href={`tel:${generatedShortCode}`} asChild>
-                <Button size="lg" className="h-32 w-32 rounded-full" disabled={!generatedShortCode}>
-                  <Text>Dial</Text>
-                  <Icon as={PhoneIcon} className="text-primary-foreground" />
-                </Button>
-              </Link>
-            </View>
+          </View>
+          <Separator orientation="vertical" />
+          <View className="grow items-center justify-center">
+            <Link href={`tel:${generatedShortCode}`} asChild>
+              <Button size="lg" className="h-32 w-32 rounded-full" disabled={!generatedShortCode}>
+                <Text>Dial</Text>
+                <Icon as={PhoneIcon} className="text-primary-foreground" />
+              </Button>
+            </Link>
           </View>
         </View>
-      </ScrollView>
-    </>
+      </View>
+    </ScrollView>
   );
 }
 
