@@ -36,7 +36,7 @@
     ],
     "experiments": {
       "typedRoutes": true,
-      "baseUrl": "/fudayd2"
+      "baseUrl": "/"
     }
   }
 }
